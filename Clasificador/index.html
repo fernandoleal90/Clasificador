@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🐾 Clasificador de Animales IA | Nutrias, Pingüinos, Focas y Leopardos</title>
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@500;700;800&display=swap" rel="stylesheet" />
+  
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- TensorFlow.js y Teachable Machine Image Library -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+</head>
+<body>
+  <!-- Background Glow Effects -->
+  <div class="bg-glow glow-1"></div>
+  <div class="bg-glow glow-2"></div>
+
+  <!-- Header -->
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="logo-area">
+        <span class="logo-icon">🌿</span>
+        <div>
+          <h1>Clasificador de Animales IA</h1>
+          <p class="subtitle">Nutrias · Pingüinos · Focas · Leopardos</p>
+        </div>
+      </div>
+
+      <div class="header-badges">
+        <div id="model-status" class="status-pill status-loading">
+          <span class="status-dot"></span>
+          <span id="model-status-text">Cargando modelo...</span>
+        </div>
+        <a href="https://teachablemachine.withgoogle.com/models/_ow2ckGpd/" target="_blank" rel="noopener" class="model-link-btn" title="Ver modelo en Teachable Machine">
+          <i class="fa-solid fa-brain"></i>
+          <span>Modelo TM</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="main-container">
+    
+    <!-- Left Column: Input Modes (Webcam / Upload / Presets) -->
+    <section class="card input-section">
+      <!-- Tabs Navigation -->
+      <nav class="tabs-nav">
+        <button class="tab-btn active" data-tab="webcam-tab">
+          <i class="fa-solid fa-video"></i>
+          <span>Cámara en Vivo</span>
+        </button>
+        <button class="tab-btn" data-tab="upload-tab">
+          <i class="fa-solid fa-cloud-arrow-up"></i>
+          <span>Subir Imagen</span>
+        </button>
+        <button class="tab-btn" data-tab="samples-tab">
+          <i class="fa-solid fa-images"></i>
+          <span>Muestras</span>
+        </button>
+      </nav>
+
+      <!-- Tab 1: Webcam -->
+      <div id="webcam-tab" class="tab-content active">
+        <div class="viewport-wrapper">
+          <div id="webcam-container" class="preview-box">
+            <!-- Canvas or Video will be injected here -->
+            <div id="webcam-placeholder" class="placeholder-msg">
+              <i class="fa-solid fa-camera"></i>
+              <p>Presiona <strong>Iniciar Cámara</strong> para comenzar la clasificación en vivo</p>
+            </div>
+          </div>
+          <!-- Scanner overlay line -->
+          <div id="webcam-scanner" class="scanner-bar hidden"></div>
+        </div>
+
+        <div class="controls-row">
+          <button id="btn-toggle-cam" class="btn btn-primary" disabled>
+            <i class="fa-solid fa-play"></i>
+            <span id="btn-cam-text">Iniciar Cámara</span>
+          </button>
+          <button id="btn-flip-cam" class="btn btn-secondary" title="Invertir vista en espejo" disabled>
+            <i class="fa-solid fa-arrows-rotate"></i>
+            <span>Espejo</span>
+          </button>
+          <button id="btn-pause-stream" class="btn btn-secondary hidden" title="Pausar análisis">
+            <i class="fa-solid fa-pause"></i>
+          </button>
+        </div>
+
+        <p class="hint-text">
+          <i class="fa-solid fa-shield-halved"></i>
+          El video se procesa localmente en tu navegador. Ninguna imagen se sube a internet.
+        </p>
+      </div>
+
+      <!-- Tab 2: Upload File / Drag & Drop -->
+      <div id="upload-tab" class="tab-content">
+        <div id="drop-area" class="drop-zone">
+          <input type="file" id="file-input" accept="image/*" class="file-hidden-input" />
+          <div class="drop-content">
+            <i class="fa-solid fa-image drop-icon"></i>
+            <h3>Arrastra y suelta tu imagen aquí</h3>
+            <p>o haz clic para explorar en tu computadora</p>
+            <span class="badge-mini">PNG, JPG, WEBP, GIF</span>
+            <div class="paste-hint">
+              <kbd>Ctrl</kbd> + <kbd>V</kbd> para pegar desde el portapapeles
+            </div>
+          </div>
+        </div>
+
+        <!-- Static Image Preview -->
+        <div id="image-preview-container" class="preview-box hidden">
+          <img id="static-preview-img" alt="Vista previa" crossorigin="anonymous" />
+          <button id="btn-remove-image" class="btn-circle-close" title="Quitar imagen">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+          <div id="image-scanner" class="scanner-bar"></div>
+        </div>
+      </div>
+
+      <!-- Tab 3: Quick Samples -->
+      <div id="samples-tab" class="tab-content">
+        <p class="samples-title">Haz clic en cualquier animal para probar el modelo al instante:</p>
+        <div class="samples-grid">
+          <!-- Sample: Nutria -->
+          <div class="sample-card" data-url="https://images.unsplash.com/photo-1700769954648-4b27065abbc7?w=600&q=80" data-label="Nutrias">
+            <div class="sample-img-wrap">
+              <img src="https://images.unsplash.com/photo-1700769954648-4b27065abbc7?w=400&q=80" alt="Nutria" loading="lazy" />
+              <span class="sample-tag">🦦 Nutria</span>
+            </div>
+          </div>
+          <!-- Sample: Pingüino -->
+          <div class="sample-card" data-url="https://images.unsplash.com/photo-1616239053698-d14536be63ce?w=600&q=80" data-label="Pinguinos">
+            <div class="sample-img-wrap">
+              <img src="https://images.unsplash.com/photo-1616239053698-d14536be63ce?w=400&q=80" alt="Pingüino" loading="lazy" />
+              <span class="sample-tag">🐧 Pingüino</span>
+            </div>
+          </div>
+          <!-- Sample: Foca -->
+          <div class="sample-card" data-url="https://images.unsplash.com/photo-1573924429356-97a3ce13c43c?w=600&q=80" data-label="Focas">
+            <div class="sample-img-wrap">
+              <img src="https://images.unsplash.com/photo-1573924429356-97a3ce13c43c?w=400&q=80" alt="Foca" loading="lazy" />
+              <span class="sample-tag">🦭 Foca</span>
+            </div>
+          </div>
+          <!-- Sample: Leopardo -->
+          <div class="sample-card" data-url="https://images.unsplash.com/photo-1456926631375-92c8ce872def?w=600&q=80" data-label="Leopardos">
+            <div class="sample-img-wrap">
+              <img src="https://images.unsplash.com/photo-1456926631375-92c8ce872def?w=400&q=80" alt="Leopardo" loading="lazy" />
+              <span class="sample-tag">🐆 Leopardo</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right Column: Predictions & Details -->
+    <section class="card results-section">
+      <div class="results-header">
+        <h2>
+          <i class="fa-solid fa-chart-simple"></i>
+          Resultados de Clasificación
+        </h2>
+        <div class="header-actions">
+          <button id="btn-speech" class="icon-toggle-btn" title="Activar lectura por voz" aria-label="Activar lectura por voz">
+            <i class="fa-solid fa-volume-high"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Top Match Winner Banner -->
+      <div id="top-match-card" class="top-match empty">
+        <div class="top-match-emoji" id="winner-emoji">🔍</div>
+        <div class="top-match-info">
+          <div class="top-match-sub">Animal Detectado</div>
+          <div class="top-match-name" id="winner-name">Esperando imagen...</div>
+          <div class="top-match-confidence" id="winner-confidence">0.0%</div>
+        </div>
+        <div class="certainty-badge" id="winner-certainty">En espera</div>
+      </div>
+
+      <!-- All Classes Progress Bars -->
+      <div class="probabilities-list" id="probabilities-container">
+        <!-- Rendered dynamically by app.js:
+             Nutrias, Pinguinos, Focas, Leopardos -->
+      </div>
+
+      <!-- Animal Information Card -->
+      <div id="animal-info-card" class="animal-info-card hidden">
+        <div class="info-card-header">
+          <i class="fa-solid fa-circle-info"></i>
+          <span id="info-card-title">Ficha Informativa</span>
+        </div>
+        <p id="info-card-desc" class="info-card-desc"></p>
+        <div class="info-badges">
+          <span class="info-pill" id="info-habitat"><i class="fa-solid fa-earth-americas"></i> Hábitat: ...</span>
+          <span class="info-pill" id="info-diet"><i class="fa-solid fa-utensils"></i> Dieta: ...</span>
+        </div>
+      </div>
+
+      <!-- Classification History -->
+      <div class="history-wrapper">
+        <div class="history-header">
+          <span><i class="fa-solid fa-clock-rotate-left"></i> Historial Reciente</span>
+          <button id="btn-clear-history" class="btn-text">Borrar</button>
+        </div>
+        <div id="history-list" class="history-list">
+          <p class="history-empty">Aún no hay predicciones registradas.</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <p>
+      Desarrollado con <strong>TensorFlow.js</strong> & <strong>Google Teachable Machine</strong>.
+      Entrenado para clasificar: 🦦 Nutrias, 🐧 Pingüinos, 🦭 Focas y 🐆 Leopardos.
+    </p>
+  </footer>
+
+  <!-- App Script -->
+  <script src="app.js"></script>
+</body>
+</html>
